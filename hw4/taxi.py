@@ -1,7 +1,9 @@
+from argparse import Action
 import numpy as np
 import os
 import gym
 import random
+import plot
 from tqdm import tqdm
 
 total_reward = []
@@ -43,7 +45,14 @@ class Agent():
             action: The action to be evaluated.
         """
         # Begin your code
-        pass
+        exp = random.uniform(0,1)
+        if exp < self.epsilon:
+            action = np.argmax(self.qtable[state, :])
+        else: 
+            action = env.action_space.sample()
+        
+        return action
+        # pass
         # End your code
 
     def learn(self, state, action, reward, next_state, done):
@@ -61,7 +70,8 @@ class Agent():
             None (Don't need to return anything)
         """
         # Begin your code
-        pass
+        self.qtable[state][action] = self.qtable[state][action] + self.learning_rate * (reward + (self.gamma * self.check_max_Q(next_state)) - self.qtable[state][action])
+        # pass
         # End your code
 
         # You can add some conditions to decide when to save your table
@@ -78,7 +88,9 @@ class Agent():
             max_q: the max Q value of given state
         """
         # Begin your code
-        pass
+        max_q = np.max(self.qtable[state, :]);
+        return max_q
+        # pass
         # End your code
 
 
@@ -165,14 +177,14 @@ def test(env):
 
             state = next_state
     # Please change to the assigned initial state in the Google sheet
-    state = 248
+    state = 252
 
     print(f"average reward: {np.mean(rewards)}")
     extract_state(state)
     print(f"max Q:{testing_agent.check_max_Q(state)}")
 
 
-def seed(seed=20):
+def seed(seed=107):
     '''
     It is very IMPORTENT to set random seed for reproducibility of your result!
     '''
@@ -186,7 +198,7 @@ if __name__ == "__main__":
     The main funtion
     '''
     # Please change to the assigned seed number in the Google sheet
-    SEED = 20
+    SEED = 107
 
     env = gym.make("Taxi-v3")
     seed(SEED)
