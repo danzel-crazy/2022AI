@@ -136,11 +136,31 @@ class Agent():
         Returns:
             None (Don't need to return anything)
         '''
+        self.count += 1
         if self.count % 100 == 0:
             self.target_net.load_state_dict(self.evaluate_net.state_dict())
 
         # Begin your code
-        pass
+         # 從 buffer 中隨機挑選經驗，將經驗分成 state、action、reward、next state
+        sample_index = np.random.choice(self.capacity, self.batch_size)
+        b_memory = self.memory[sample_index, :]
+        b_state = torch.tensor(b_memory[:, :self.next_states], dtype=torch.float)
+        b_action = torch.tensor(b_memory[:, self.n_states:self.n_states+1], dtype=torch.long)
+        b_reward = torch.tensor(b_memory[:, self.n_states+1:self.n_states+2], dtype=torch.float)
+        b_next_state = torch.tensor(b_memory[:, -self.n_states:], dtype=torch.float)
+
+        # 計算 eval net 的 Q-value 和 target net 的 loss
+        q_eval = self.eval_net(b_state).gather(1, b_action) # 經驗當時的 Q-value
+        q_next = self.target_net(b_next_state).detach()
+        q_target = b_reward + self.gamma * q_next.max(1).values.unsqueeze(-1) # 目標 Q-value
+        loss = self.loss_func(q_eval, q_target)
+
+        # Backpropagation
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        
+        # pass
         # End your code
 
         # You can add some conditions to decide when to save your neural network model
@@ -162,7 +182,13 @@ class Agent():
         """
         with torch.no_grad():
             # Begin your code
-            pass
+            x = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0)
+            if np.random.uniform() < self.epsilon:
+                action = np.random.randint(0, self.n_actions)
+            else:
+                action_values = self.eval_net(x)
+                action = torch.argmax(action_values).item()
+            # pass
             # End your code
         return action
 
@@ -180,7 +206,10 @@ class Agent():
             max_q: the max Q value of initial state(self.env.reset())
         """
         # Begin your code
-        pass
+        initial = self.discretize_observation(self.env.reset())
+        max_q = np.max(self.buffer[initial])
+        return max_q
+        # pass
         # End your code
 
 
@@ -247,7 +276,7 @@ def test(env):
     print(f"max Q:{testing_agent.check_max_Q()}")
 
 
-def seed(seed=20):
+def seed(seed=107):
     '''
     It is very IMPORTENT to set random seed for reproducibility of your result!
     '''
@@ -262,7 +291,7 @@ if __name__ == "__main__":
     The main funtion
     '''
     # Please change to the assigned seed number in the Google sheet
-    SEED = 20
+    SEED = 107
 
     env = gym.make('CartPole-v0')
     seed(SEED)

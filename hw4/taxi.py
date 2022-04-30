@@ -10,7 +10,7 @@ total_reward = []
 
 
 class Agent():
-    def __init__(self, env, epsilon=0.95, learning_rate=0.8, gamma=0.9):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.8, gamma=0.9):
         """
         Parameters:
             env: target enviornment.
@@ -27,9 +27,9 @@ class Agent():
         # Initialize qtable
         self.qtable = np.zeros((env.observation_space.n, env.action_space.n))
 
-        self.max_epsilon = 1.0
-        self.min_epsilon = 0.01
-        self.decay_rate = 0.01
+        # self.max_epsilon = 1.0
+        # self.min_epsilon = 0.01
+        # self.decay_rate = 0.01
 
         self.qvalue_rec = []
 
@@ -45,8 +45,8 @@ class Agent():
             action: The action to be evaluated.
         """
         # Begin your code
-        exp = random.uniform(0,1)
-        if exp < self.epsilon:
+        exp = np.random.uniform(0,1)
+        if exp > self.epsilon:
             action = np.argmax(self.qtable[state, :])
         else: 
             action = env.action_space.sample()
@@ -70,12 +70,14 @@ class Agent():
             None (Don't need to return anything)
         """
         # Begin your code
-        self.qtable[state][action] = self.qtable[state][action] + self.learning_rate * (reward + (self.gamma * self.check_max_Q(next_state)) - self.qtable[state][action])
+        self.qtable[state][action] = self.qtable[state][action] + self.learning_rate * \
+            (reward + (self.gamma * self.check_max_Q(next_state)) - self.qtable[state][action])
         # pass
         # End your code
 
         # You can add some conditions to decide when to save your table
-        np.save("./Tables/taxi_table.npy", self.qtable)
+        if done: 
+            np.save("./Tables/taxi_table.npy", self.qtable)
 
     def check_max_Q(self, state):
         """
@@ -88,7 +90,7 @@ class Agent():
             max_q: the max Q value of given state
         """
         # Begin your code
-        max_q = np.max(self.qtable[state, :]);
+        max_q = np.max(self.qtable[state, :])
         return max_q
         # pass
         # End your code
@@ -143,9 +145,9 @@ def train(env):
 
             state = next_state
 
-        training_agent.epsilon = training_agent.min_epsilon + \
-            (training_agent.max_epsilon - training_agent.min_epsilon) * \
-            np.exp(-training_agent.decay_rate*(ep + 1))
+        # training_agent.epsilon = training_agent.min_epsilon + \
+        #     (training_agent.max_epsilon - training_agent.min_epsilon) * \
+        #     np.exp(-training_agent.decay_rate*(ep + 1))
 
     total_reward.append(rewards)
 
