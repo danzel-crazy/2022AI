@@ -141,16 +141,17 @@ class Agent():
             self.target_net.load_state_dict(self.evaluate_net.state_dict())
 
         # Begin your code
-         # 從 buffer 中隨機挑選經驗，將經驗分成 state、action、reward、next state
+        # 從 buffer 中隨機挑選經驗，將經驗分成 state、action、reward、next state
         sample_index = np.random.choice(self.capacity, self.batch_size)
-        b_memory = self.memory[sample_index, :]
-        b_state = torch.tensor(b_memory[:, :self.next_states], dtype=torch.float)
-        b_action = torch.tensor(b_memory[:, self.n_states:self.n_states+1], dtype=torch.long)
-        b_reward = torch.tensor(b_memory[:, self.n_states+1:self.n_states+2], dtype=torch.float)
-        b_next_state = torch.tensor(b_memory[:, -self.n_states:], dtype=torch.float)
+        # b_memory = self.memory[sample_index, :]
+        b_memory = replay_buffer().sample(sample_index[0], sample_index[1])
+        b_state = torch.tensor(b_memory[0], dtype=torch.float)
+        b_action = torch.tensor(b_memory[1], dtype=torch.long)
+        b_reward = torch.tensor(b_memory[2], dtype=torch.float)
+        b_next_state = torch.tensor(b_memory[3], dtype=torch.float)
 
         # 計算 eval net 的 Q-value 和 target net 的 loss
-        q_eval = self.eval_net(b_state).gather(1, b_action) # 經驗當時的 Q-value
+        q_eval = self.evaluate_net(b_state).gather(1, b_action) # 經驗當時的 Q-value
         q_next = self.target_net(b_next_state).detach()
         q_target = b_reward + self.gamma * q_next.max(1).values.unsqueeze(-1) # 目標 Q-value
         loss = self.loss_func(q_eval, q_target)
@@ -186,7 +187,7 @@ class Agent():
             if np.random.uniform() < self.epsilon:
                 action = np.random.randint(0, self.n_actions)
             else:
-                action_values = self.eval_net(x)
+                action_values = self.evaluate_net(x)
                 action = torch.argmax(action_values).item()
             # pass
             # End your code
