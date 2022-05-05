@@ -84,7 +84,7 @@ class Net(nn.Module):
 
 
 class Agent():
-    def __init__(self, env, epsilon=0.95, learning_rate=0.0002, GAMMA=0.97, batch_size=32, capacity=10000):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.0002, GAMMA=0.97, batch_size=32, capacity=10000):
         """
         The agent learning how to control the action of the cart pole.
         
@@ -136,36 +136,46 @@ class Agent():
         Returns:
             None (Don't need to return anything)
         '''
-        self.count += 1
+        
         if self.count % 100 == 0:
             self.target_net.load_state_dict(self.evaluate_net.state_dict())
 
         # Begin your code
-        # 從 buffer 中隨機挑選經驗，將經驗分成 state、action、reward、next state
-        sample_index = np.random.choice(self.capacity, self.batch_size)
-        # b_memory = self.memory[sample_index, :]
-        b_memory = replay_buffer().sample(sample_index[0], sample_index[1])
+        # b_memory = []
+        b_memory = self.buffer.sample(self.batch_size)
+        # print(b_memory)
         b_state = torch.tensor(b_memory[0], dtype=torch.float)
-        b_action = torch.tensor(b_memory[1], dtype=torch.long)
-        b_reward = torch.tensor(b_memory[2], dtype=torch.float)
+        b_action = torch.tensor(b_memory[1], dtype=torch.long).unsqueeze(-1)
+        b_reward = torch.tensor(b_memory[2], dtype=torch.float).unsqueeze(-1)
         b_next_state = torch.tensor(b_memory[3], dtype=torch.float)
-
-        # 計算 eval net 的 Q-value 和 target net 的 loss
-        q_eval = self.evaluate_net(b_state).gather(1, b_action) # 經驗當時的 Q-value
+        # print(b_action)
+        
+        q_eval = self.evaluate_net(b_state).gather(1, b_action) 
         q_next = self.target_net(b_next_state).detach()
-        q_target = b_reward + self.gamma * q_next.max(1).values.unsqueeze(-1) # 目標 Q-value
-        loss = self.loss_func(q_eval, q_target)
+        # print(q_next)
+        q_target = b_reward + self.gamma * q_next.max(1).values.unsqueeze(-1)
+        done = torch.tensor(b_memory[4], dtype=torch.float)
+        # print(done)
 
-        # Backpropagation
+        for i in range(len(done)):
+            good = done[i]
+            # print(good)
+            if good:
+                # print(2)
+                q_target[i] =  0
+        # print(q_target) 
+        loss_func = nn.MSELoss()
+        loss = loss_func(q_eval, q_target) 
+        # print(loss)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         
+        self.count += 1
         # pass
         # End your code
-
-        # You can add some conditions to decide when to save your neural network model
-        torch.save(self.target_net.state_dict(), "./Tables/DQN.pt")
+        if loss < 0.5:
+            torch.save(self.target_net.state_dict(), "./Tables/DQN.pt")
 
     def choose_action(self, state):
         """
@@ -184,7 +194,7 @@ class Agent():
         with torch.no_grad():
             # Begin your code
             x = torch.unsqueeze(torch.tensor(state, dtype=torch.float), 0)
-            if np.random.uniform() < self.epsilon:
+            if np.random.uniform(0,1) < self.epsilon:
                 action = np.random.randint(0, self.n_actions)
             else:
                 action_values = self.evaluate_net(x)
@@ -207,9 +217,13 @@ class Agent():
             max_q: the max Q value of initial state(self.env.reset())
         """
         # Begin your code
-        initial = self.discretize_observation(self.env.reset())
-        max_q = np.max(self.buffer[initial])
-        return max_q
+        initial = torch.tensor(self.env.reset(), dtype=torch.float)
+        # print(initial)
+        q_next = self.target_net(initial).detach()
+        # print(q_next)
+        max_q = q_next.max(0).values.unsqueeze(-1)
+        # max_q = torch.max(self.target_net[initial])
+        return max_q[0]
         # pass
         # End your code
 
