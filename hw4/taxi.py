@@ -71,7 +71,7 @@ class Agent():
         """
         # Begin your code
         self.qtable[state][action] = self.qtable[state][action] + self.learning_rate * \
-            (reward + (self.gamma * self.check_max_Q(next_state)) - self.qtable[state][action])
+            (reward + (self.gamma * np.max(self.qtable[next_state])) - self.qtable[state][action])
         # pass
         # End your code
 
@@ -90,7 +90,11 @@ class Agent():
             max_q: the max Q value of given state
         """
         # Begin your code
-        max_q = np.max(self.qtable[state, :])
+        step = 11  #(2,2) -> B -> R
+        num = np.power(self.gamma, step)
+        optimal = (-1) * (1-num) / (1-self.gamma) + num * 20
+        print("Optimal max-q: ", optimal)
+        max_q = np.max(self.qtable[state])
         return max_q
         # pass
         # End your code

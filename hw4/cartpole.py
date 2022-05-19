@@ -200,6 +200,10 @@ class Agent():
         initial = self.discretize_observation(self.env.reset())
         # print(initial)
         max_q = np.amax(self.qtable[tuple(initial)])
+        step = 180
+        num = np.power(self.gamma, step)
+        optimal = (1-num) / (1-self.gamma)
+        print("Optimal max-q: ", optimal)
         return max_q
         # pass
         # End your code
